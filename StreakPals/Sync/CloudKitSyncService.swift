@@ -1,6 +1,9 @@
 import CloudKit
 import Foundation
 
+/// Optional sync through CloudKit's public database. Invite codes are record
+/// names, so another phone can join without a share sheet. This stays unused
+/// until `SyncConfiguration.backend` is `.cloudKit`.
 final class CloudKitSyncService: SyncService {
     let kind: SyncBackendKind = .cloudKit
     private let photos: PhotoStoring
