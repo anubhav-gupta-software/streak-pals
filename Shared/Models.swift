@@ -135,9 +135,47 @@ struct AppSnapshot: Codable, Equatable {
     var checkIns: [CheckIn] = []
     var activePalID: UUID?
     var remindersEnabled: Bool = true
-    var pendingDeletes: [String] = []
+    /// Kept so a delete on one phone isn't uploaded again by another.
+    var deletedHabitIDs: [UUID] = []
+    /// Check-in ids keyed by habit id, so one habit's deletes don't wipe another.
+    var deletedCheckInsByHabit: [String: [UUID]] = [:]
 
     static let empty = AppSnapshot()
+
+    enum CodingKeys: String, CodingKey {
+        case pals, circles, habits, checkIns, activePalID, remindersEnabled
+        case deletedHabitIDs, deletedCheckInsByHabit, deletedCheckInIDs
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        pals = try container.decodeIfPresent([Pal].self, forKey: .pals) ?? []
+        circles = try container.decodeIfPresent([Circle].self, forKey: .circles) ?? []
+        habits = try container.decodeIfPresent([Habit].self, forKey: .habits) ?? []
+        checkIns = try container.decodeIfPresent([CheckIn].self, forKey: .checkIns) ?? []
+        activePalID = try container.decodeIfPresent(UUID.self, forKey: .activePalID)
+        remindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .remindersEnabled) ?? true
+        deletedHabitIDs = try container.decodeIfPresent([UUID].self, forKey: .deletedHabitIDs) ?? []
+        deletedCheckInsByHabit = try container.decodeIfPresent([String: [UUID]].self, forKey: .deletedCheckInsByHabit) ?? [:]
+        if deletedCheckInsByHabit.isEmpty,
+           let legacy = try container.decodeIfPresent([UUID].self, forKey: .deletedCheckInIDs) {
+            deletedCheckInsByHabit["legacy"] = legacy
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(pals, forKey: .pals)
+        try container.encode(circles, forKey: .circles)
+        try container.encode(habits, forKey: .habits)
+        try container.encode(checkIns, forKey: .checkIns)
+        try container.encodeIfPresent(activePalID, forKey: .activePalID)
+        try container.encode(remindersEnabled, forKey: .remindersEnabled)
+        try container.encode(deletedHabitIDs, forKey: .deletedHabitIDs)
+        try container.encode(deletedCheckInsByHabit, forKey: .deletedCheckInsByHabit)
+    }
 
     var activePal: Pal? {
         guard let activePalID else { return nil }
@@ -198,11 +236,23 @@ struct AppSnapshot: Codable, Equatable {
     }
 
     mutating func upsertCircle(_ remote: Circle) {
-        guard let index = circles.firstIndex(where: { $0.id == remote.id || $0.inviteCode == remote.inviteCode }) else {
+        if let index = circles.firstIndex(where: { $0.id == remote.id }) {
+            circles[index] = circles[index].merging(remote)
+            return
+        }
+        guard let index = circles.firstIndex(where: { $0.inviteCode == remote.inviteCode }) else {
             circles.append(remote)
             return
         }
-        circles[index] = circles[index].merging(remote)
+        let previousID = circles[index].id
+        var merged = circles[index].merging(remote)
+        merged.id = remote.id
+        circles[index] = merged
+        if previousID != remote.id {
+            for habitIndex in habits.indices where habits[habitIndex].circleID == previousID {
+                habits[habitIndex].circleID = remote.id
+            }
+        }
     }
 
     mutating func upsertHabit(_ remote: Habit) {
@@ -211,6 +261,37 @@ struct AppSnapshot: Codable, Equatable {
             return
         }
         habits[index] = habits[index].merging(remote)
+    }
+
+    mutating func apply(_ bundle: CircleBundle) {
+        upsertCircle(bundle.circle)
+        for pal in bundle.pals {
+            upsertPal(pal)
+        }
+        for habit in bundle.habits where !deletedHabitIDs.contains(habit.id) {
+            upsertHabit(habit)
+        }
+        for checkIn in bundle.checkIns where !isCheckInDeleted(checkIn.id) {
+            upsertCheckIn(checkIn)
+        }
+    }
+
+    func isCheckInDeleted(_ id: UUID) -> Bool {
+        deletedCheckInsByHabit.values.contains { $0.contains(id) }
+    }
+
+    mutating func noteDeletedCheckIn(_ id: UUID, habitID: UUID) {
+        var list = deletedCheckInsByHabit[habitID.uuidString] ?? []
+        if !list.contains(id) {
+            list.append(id)
+        }
+        deletedCheckInsByHabit[habitID.uuidString] = list
+    }
+
+    mutating func noteDeletedHabit(_ id: UUID) {
+        if !deletedHabitIDs.contains(id) {
+            deletedHabitIDs.append(id)
+        }
     }
 
     mutating func upsertCheckIn(_ remote: CheckIn) {

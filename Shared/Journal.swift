@@ -12,6 +12,8 @@ struct CheckInWrite: Equatable {
     var securedToday: Bool
     /// Set when the caller should write JPEG bytes under this filename.
     var photoFilename: String?
+    /// A previous photo the caller should delete from disk.
+    var removedPhotoFilename: String?
 }
 
 enum Journal {
@@ -22,6 +24,7 @@ enum Journal {
         habitID: UUID,
         note: String,
         attachPhoto: Bool,
+        clearPhoto: Bool = false,
         now: Date = .now,
         calendar: Calendar = .current
     ) throws -> CheckInWrite {
@@ -40,25 +43,30 @@ enum Journal {
             calendar: calendar
         )
         let existing = snapshot.checkIn(habitID: habitID, palID: palID, dayKey: dayKey)
+        let removedPhoto = clearPhoto ? existing?.photoFilename : nil
+        let recordID = existing?.id ?? UUID()
 
-        let filename: String?
-        if let existing {
-            filename = attachPhoto ? (existing.photoFilename ?? "\(existing.id.uuidString).jpg") : existing.photoFilename
-            if let index = snapshot.checkIns.firstIndex(where: { $0.id == existing.id }) {
-                snapshot.checkIns[index].note = trimmedNote
-                snapshot.checkIns[index].photoFilename = filename
-            }
+        let storedFilename: String?
+        if clearPhoto {
+            storedFilename = nil
+        } else if attachPhoto {
+            storedFilename = existing?.photoFilename ?? "\(recordID.uuidString).jpg"
         } else {
-            let id = UUID()
-            filename = attachPhoto ? "\(id.uuidString).jpg" : nil
+            storedFilename = existing?.photoFilename
+        }
+
+        if let index = existing.flatMap({ item in snapshot.checkIns.firstIndex { $0.id == item.id } }) {
+            snapshot.checkIns[index].note = trimmedNote
+            snapshot.checkIns[index].photoFilename = storedFilename
+        } else {
             snapshot.checkIns.append(
                 CheckIn(
-                    id: id,
+                    id: recordID,
                     habitID: habitID,
                     palID: palID,
                     dayKey: dayKey,
                     note: trimmedNote,
-                    photoFilename: filename,
+                    photoFilename: storedFilename,
                     createdAt: now
                 )
             )
@@ -75,7 +83,8 @@ enum Journal {
             habitTitle: habit.title,
             alreadyDone: existing != nil,
             securedToday: !before.todayComplete && after.todayComplete,
-            photoFilename: attachPhoto ? filename : nil
+            photoFilename: attachPhoto && !clearPhoto ? storedFilename : nil,
+            removedPhotoFilename: removedPhoto
         )
     }
 }
