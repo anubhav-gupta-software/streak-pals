@@ -1,0 +1,136 @@
+name: StreakPals
+options:
+  minimumXcodeGenVersion: 2.38.0
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  developmentLanguage: en
+configs:
+  Debug: debug
+  Release: release
+  Debug-AppGroup: debug
+  Release-AppGroup: release
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    SUPPORTS_MACCATALYST: NO
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      DEBUG_INFORMATION_FORMAT: dwarf
+      ENABLE_TESTABILITY: YES
+      ONLY_ACTIVE_ARCH: YES
+    Debug-AppGroup:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      DEBUG_INFORMATION_FORMAT: dwarf
+      ENABLE_TESTABILITY: YES
+      ONLY_ACTIVE_ARCH: YES
+    Release:
+      SWIFT_COMPILATION_MODE: wholemodule
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      VALIDATE_PRODUCT: YES
+    Release-AppGroup:
+      SWIFT_COMPILATION_MODE: wholemodule
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      VALIDATE_PRODUCT: YES
+targets:
+  StreakPals:
+    type: application
+    platform: iOS
+    sources:
+      - path: StreakPals
+        excludes:
+          - Info.plist
+      - path: Shared
+    dependencies:
+      - target: StreakPalsWidget
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.streakpals.ios
+        PRODUCT_NAME: StreakPals
+        INFOPLIST_FILE: StreakPals/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        ENABLE_PREVIEWS: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPals.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPals.entitlements
+        Debug-AppGroup:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPals.AppGroup.entitlements
+        Release-AppGroup:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPals.AppGroup.entitlements
+  StreakPalsWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: StreakPalsWidget
+        excludes:
+          - Info.plist
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.streakpals.ios.widget
+        PRODUCT_NAME: StreakPalsWidget
+        INFOPLIST_FILE: StreakPalsWidget/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPalsWidget.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPalsWidget.entitlements
+        Debug-AppGroup:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPalsWidget.AppGroup.entitlements
+        Release-AppGroup:
+          CODE_SIGN_ENTITLEMENTS: Config/StreakPalsWidget.AppGroup.entitlements
+schemes:
+  StreakPals:
+    build:
+      targets:
+        StreakPals: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  StreakPals-AppGroup:
+    build:
+      targets:
+        StreakPals: all
+    run:
+      config: Debug-AppGroup
+    test:
+      config: Debug-AppGroup
+    profile:
+      config: Release-AppGroup
+    analyze:
+      config: Debug-AppGroup
+    archive:
+      config: Release-AppGroup
