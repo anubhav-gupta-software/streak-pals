@@ -40,8 +40,29 @@ struct StatsModel: Equatable {
         let startOfThisWeek = calendar.date(byAdding: .day, value: -delta, to: today) ?? today
         let start = calendar.date(byAdding: .day, value: -7 * (weeksBack - 1), to: startOfThisWeek) ?? today
 
-        var columns: [[HeatCell?]] = []
         var perfect = 0
+        if let earliest = habits.map({ calendar.startOfDay(for: $0.createdAt) }).min() {
+            var day = earliest
+            while day <= today {
+                let active = habits.filter { calendar.startOfDay(for: $0.createdAt) <= day }
+                if !active.isEmpty {
+                    let done = active.filter {
+                        StreakEngine.isDayComplete(
+                            habit: $0,
+                            circle: snapshot.circle(for: $0),
+                            day: day,
+                            index: index,
+                            calendar: calendar
+                        )
+                    }.count
+                    if done == active.count { perfect += 1 }
+                }
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day), next > day else { break }
+                day = next
+            }
+        }
+
+        var columns: [[HeatCell?]] = []
         var cursor = start
         for _ in 0..<weeksBack {
             var column: [HeatCell?] = []
@@ -64,7 +85,6 @@ struct StatsModel: Equatable {
                             )
                         }.count
                         let fraction = Double(done) / Double(active.count)
-                        if done == active.count { perfect += 1 }
                         column.append(HeatCell(id: key, fraction: fraction, hasHabits: true))
                     }
                 }
