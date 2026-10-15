@@ -78,6 +78,7 @@ struct SettingsView: View {
             ForEach(store.snapshot.pals.filter(\.isLocalProfile)) { pal in
                 Button {
                     store.switchToPal(pal.id)
+                    name = pal.displayName
                 } label: {
                     HStack(spacing: 12) {
                         Text(pal.initial)
