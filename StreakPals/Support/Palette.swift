@@ -19,8 +19,10 @@ enum Palette {
     ]
 }
 
-struct HabitDraft: Equatable {
-    var id: UUID?
+struct HabitDraft: Equatable, Identifiable {
+    /// Identity for the editor sheet. Not the habit's id.
+    var id = UUID()
+    var habitID: UUID?
     var title: String = ""
     var symbolName: String = Palette.symbols[0]
     var colorHex: String = Palette.habitColors[0]

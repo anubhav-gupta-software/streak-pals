@@ -199,7 +199,7 @@ final class AppStore {
         guard let pal = snapshot.activePal else { throw AppError.needProfile }
         let title = clean(draft.title, limit: 40)
         guard !title.isEmpty else { throw AppError.emptyName }
-        if let id = draft.id, let index = snapshot.habits.firstIndex(where: { $0.id == id }) {
+        if let id = draft.habitID, let index = snapshot.habits.firstIndex(where: { $0.id == id }) {
             snapshot.habits[index].title = title
             snapshot.habits[index].symbolName = draft.symbolName
             snapshot.habits[index].colorHex = draft.colorHex
